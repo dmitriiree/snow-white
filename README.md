@@ -1,7 +1,4 @@
-# 백설 공주 · Snow White
+# Moved
 
-Korean children's play «백설 공주» as an interactive cartoon player: voices, subtitles (KO / RU / EN) and a rehearsal mode — pick a role, hear the model line, say it yourself, press Space.
-
-Open: https://dmitriiree.github.io/snow-white/ · All stories: https://dmitriiree.github.io/
-
-Voices: ElevenLabs (eleven_v4). Korean script is a school play adaptation of the Brothers Grimm tale.
+This page now lives at https://dmitriiree.github.io/fairytales/snow-white/ (repo `dmitriiree/fairytales`).
+The site here only redirects there.
