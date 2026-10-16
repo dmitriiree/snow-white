@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>백설 공주</title>
+<style>
+  :root {
+    --ink: #1f2a2e; --paper: #f7efe0; --panel: #192b32; --muted: #9fb3b9; --accent: #f2b544;
+    --n: #8fd0e0; --snow: #ff9a8a; --mother: #a8d8a0; --queen: #d79bff; --mirror: #bfe6ff;
+    --hunter: #9fd98a; --prince: #8fb4ff; --d1: #ffb070; --d2: #ffd760; --d3: #8fc8ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #0e181c; color: #fff; font-family: "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px 16px 24px; }
+  .wrap { width: 100%; max-width: 1180px; }
+  .home { display: inline-block; margin: 0 0 8px 2px; color: var(--muted); text-decoration: none; font-size: 15px; }
+  .home:hover { color: var(--accent); }
+
+  /* ---------- stage ---------- */
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 14px;
+           background: #000; box-shadow: 0 10px 40px #0008; user-select: none; }
+  .stage.quake { animation: quake .5s linear 2; }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center bottom;
+        transition: opacity .9s ease; }
+  .tint { position: absolute; inset: 0; pointer-events: none; transition: background .9s; mix-blend-mode: soft-light; }
+  .tint.evening { background: linear-gradient(#ff8a4a99, #6a3a7a55); }
+  .tint.dusk { background: linear-gradient(#3a3a8a99, #6a3a7a66); }
+  .tint.golden { background: linear-gradient(#ffd27acc, #ff9a5a33); }
+  #layer { position: absolute; inset: 0; z-index: 20; }
+  #props, #actors { position: absolute; inset: 0; }
+  #props { z-index: 1; } #actors { z-index: 2; }
+
+  .actor { position: absolute; transform: translateX(-50%); transition: left 1s ease-in-out, bottom .7s ease-out,
+           height .8s ease, opacity .6s; }
+  .actor .fx, .actor .talk { height: 100%; transform-origin: 50% 100%; }
+  .actor img { height: 100%; display: block; transform-origin: 50% 100%; filter: drop-shadow(0 6px 6px #0006);
+               transition: filter .5s; }
+  .actor.flip img { transform: scaleX(-1); }
+  .actor.mad img { filter: hue-rotate(-25deg) saturate(1.5) brightness(.85) drop-shadow(0 0 14px #ff3a3a88); }
+  .actor.disguise img { filter: sepia(.45) saturate(.8) brightness(.8) drop-shadow(0 6px 6px #0006); }
+  .actor.mirror.speaking img { filter: drop-shadow(0 0 22px #bfe6ff) brightness(1.08); }
+  .actor .apple { position: absolute; left: 70%; top: 44%; font-size: clamp(16px, 3vw, 40px); display: none;
+                  transform: translate(-50%, -50%); filter: drop-shadow(0 0 8px #7cff6a); }
+  .actor.holding .apple { display: block; animation: pulse 1.4s ease-in-out infinite; }
+  .actor .tag { position: absolute; left: 50%; top: -9%; transform: translate(-50%, -100%); white-space: nowrap;
+      font-size: clamp(11px, 1.5vw, 18px); font-weight: 700; padding: .2em .7em; border-radius: 99px;
+      background: #0009; opacity: 0; transition: opacity .3s; }
+  .actor.speaking .tag { opacity: 1; }
+  .burst { position: absolute; left: 50%; top: 0; transform: translate(-50%, -40%); font-weight: 900;
+      font-size: clamp(18px, 3.4vw, 46px); color: #fff; -webkit-text-stroke: 2px #222; paint-order: stroke;
+      white-space: nowrap; animation: burst 1.1s ease-out forwards; z-index: 50; pointer-events: none; }
+  .particle { position: absolute; font-size: clamp(16px, 2.6vw, 34px); pointer-events: none; animation: floatup 1.6s ease-out forwards; }
+  .tear { position: absolute; width: 6%; aspect-ratio: .6; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+          background: #8fd3ff; animation: tear 1s ease-in forwards; pointer-events: none; }
+
+  /* one-shot emotion animations on .fx */
+  .a-jump   { animation: jump .55s ease-out 2; }
+  .a-droop  { animation: droop 1.6s ease-in-out forwards; }
+  .a-sob    { animation: sob .35s ease-in-out 6; }
+  .a-shake  { animation: shake .12s linear 14; }
+  .a-heave  { animation: heave .6s ease-in-out 3; }
+  .a-laugh  { animation: laugh .3s ease-in-out 6; }
+  .a-hurt   { animation: hurt .5s ease-out 2; }
+  .a-look   { animation: look 1.4s ease-in-out 1; }
+  .a-play   { animation: play .4s ease-in-out 8; }
+  .a-bow    { animation: bow 1.2s ease-in-out 1; }
+  .a-cute   { animation: cute .5s ease-in-out 3; }
+  .a-angry  { animation: angry .1s linear 12; }
+  .a-think  { animation: think 1.8s ease-in-out 1; }
+  .a-faint  { animation: faint 1.4s ease-in forwards; }
+  .a-dance  { animation: dance .7s ease-in-out 5; }
+  @keyframes jump  { 0%,100% { transform: translateY(0) } 40% { transform: translateY(-14%) scaleY(1.04) } 70% { transform: translateY(0) scaleY(.94) } }
+  @keyframes droop { to { transform: scaleY(.93) translateY(2%) rotate(-2deg) } }
+  @keyframes sob   { 0%,100% { transform: translateY(0) } 50% { transform: translateY(1.5%) scaleY(.97) } }
+  @keyframes shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-2.5%) rotate(-1deg) } 75% { transform: translateX(2.5%) rotate(1deg) } }
+  @keyframes heave { 0%,100% { transform: rotate(0) } 50% { transform: rotate(-5deg) translateX(-3%) } }
+  @keyframes laugh { 0%,100% { transform: rotate(0) } 50% { transform: rotate(3deg) scaleY(1.03) } }
+  @keyframes hurt  { 0% { transform: translateY(0) } 30% { transform: translateY(-10%) rotate(6deg); filter: brightness(1.6) sepia(1) hue-rotate(-40deg) } 100% { transform: none } }
+  @keyframes look  { 0%,100% { transform: rotate(0) } 30%,70% { transform: rotate(-8deg) translateY(-6%) } }
+  @keyframes play  { 0%,100% { transform: rotate(-3deg) } 50% { transform: rotate(3deg) translateY(-3%) } }
+  @keyframes bow   { 0%,100% { transform: rotate(0) } 50% { transform: rotate(12deg) translateY(6%) } }
+  @keyframes cute  { 0%,100% { transform: scale(1) } 50% { transform: scale(1.08) rotate(-4deg) } }
+  @keyframes angry { 0%,100% { transform: translateX(0) scale(1.03) } 50% { transform: translateX(-2%) scale(1.05) } }
+  @keyframes think { 0%,100% { transform: rotate(0) } 25% { transform: rotate(-5deg) } 75% { transform: rotate(5deg) } }
+  @keyframes faint { 0% { transform: none } 30% { transform: rotate(-6deg) translateY(-3%) } 100% { transform: rotate(84deg) translate(-10%, 20%); opacity: .9 } }
+  @keyframes dance { 0%,100% { transform: rotate(0) translateY(0) } 25% { transform: rotate(-7deg) translateY(-8%) } 75% { transform: rotate(7deg) translateY(-8%) } }
+  @keyframes quake { 0%,100% { transform: translate(0) } 25% { transform: translate(-6px, 3px) } 50% { transform: translate(5px, -4px) } 75% { transform: translate(-3px, -2px) } }
+  @keyframes burst { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.4) rotate(-8deg) } 25% { opacity: 1; transform: translate(-50%, -60%) scale(1.15) rotate(3deg) } 100% { opacity: 0; transform: translate(-50%, -120%) scale(1) } }
+  @keyframes floatup { 0% { opacity: 0; transform: translateY(0) scale(.5) } 20% { opacity: 1 } 100% { opacity: 0; transform: translateY(-160%) scale(1.2) rotate(15deg) } }
+  @keyframes tear { 0% { opacity: 0; transform: translateY(0) } 20% { opacity: 1 } 100% { opacity: 0; transform: translateY(300%) } }
+  @keyframes pulse { 0%,100% { transform: scale(.8); opacity: .7 } 50% { transform: scale(1.2); opacity: 1 } }
+
+  /* overlays */
+  .card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          background: radial-gradient(ellipse, #2a4650ee, #0e181cf5); opacity: 0; pointer-events: none;
+          transition: opacity .6s; text-align: center; padding: 16px; z-index: 80; }
+  .card.show { opacity: 1; }
+  .card .num { color: var(--accent); font-size: clamp(16px, 2.4vw, 28px); letter-spacing: .1em; }
+  .card .ko { font-size: clamp(26px, 5vw, 60px); font-weight: 800; margin: .2em 0; }
+  .card .ru { color: var(--muted); font-size: clamp(14px, 2vw, 24px); }
+  .action { position: absolute; left: 50%; top: 4%; transform: translateX(-50%); max-width: 90%; text-align: center;
+            background: #000a; padding: .4em 1em; border-radius: 99px; font-style: italic; color: #ffe9b0;
+            font-size: clamp(12px, 1.7vw, 20px); opacity: 0; transition: opacity .4s; z-index: 70; }
+  .action.show { opacity: 1; }
+  .title { position: absolute; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           background: linear-gradient(#0e181c55, #0e181ccc); cursor: pointer; text-align: center; padding: 16px; }
+  .title h1 { margin: 0; font-size: clamp(34px, 7vw, 84px); text-shadow: 0 4px 20px #000; }
+  .title p { margin: .3em 0 1em; color: #ffe9b0; font-size: clamp(14px, 2.2vw, 24px); }
+  .title .go { font-size: clamp(18px, 2.6vw, 28px); background: var(--accent); color: var(--ink); border: 0; border-radius: 99px;
+               padding: .6em 1.6em; font-weight: 800; cursor: pointer; box-shadow: 0 6px 0 #b7822a; }
+  .yourturn { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); z-index: 85; display: none;
+              background: var(--accent); color: var(--ink); font-weight: 800; border: 0; border-radius: 99px;
+              padding: .7em 1.4em; font-size: clamp(14px, 2vw, 22px); cursor: pointer; box-shadow: 0 6px 0 #b7822a; }
+  .yourturn.show { display: block; animation: pulse 1.2s ease-in-out infinite; }
+
+  /* ---------- subtitles & controls ---------- */
+  .sub { background: var(--panel); border-radius: 12px; margin-top: 10px; padding: 12px 16px; min-height: 118px; }
+  .sub .who { font-weight: 800; font-size: clamp(14px, 1.8vw, 19px); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .sub .cue { color: var(--muted); font-weight: 400; font-style: italic; }
+  .sub .ko { font-size: clamp(19px, 2.8vw, 32px); line-height: 1.35; margin: 4px 0; }
+  .sub .ruline { color: #c9d6da; font-size: clamp(14px, 1.9vw, 19px); }
+  .sub .enline { color: #b9d3c4; font-size: clamp(14px, 1.9vw, 19px); }
+  .card .en { color: var(--muted); font-size: clamp(14px, 2vw, 24px); }
+  .hide-ru .ruline, .hide-ru .card .ru, .hide-ru .action .r,
+  .hide-en .enline, .hide-en .card .en, .hide-en .action .e, .hide-en .sub .cue .e { display: none; }
+  .hide-ru .sub .cue .r { display: none; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .controls button, .controls select, .controls label { background: #22363e; color: #fff; border: 1px solid #36505a; border-radius: 10px;
+      padding: 8px 12px; font-size: 15px; font-family: inherit; cursor: pointer; min-height: 40px; }
+  .controls button:hover { background: #2c4650; }
+  .controls .main { background: var(--accent); color: var(--ink); font-weight: 800; border-color: var(--accent); min-width: 56px; }
+  .controls label { display: inline-flex; gap: 6px; align-items: center; }
+  .chapters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chapters button.on { background: var(--accent); color: var(--ink); }
+  .progress { height: 6px; background: #22363e; border-radius: 99px; margin-top: 10px; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  /* ?record — layout for rendering the mp4 (1280x720, no controls) */
+  body.rec { padding: 0; overflow: hidden; }
+  .rec .wrap { max-width: none; }
+  .rec .stage { border-radius: 0; aspect-ratio: auto; height: 570px; box-shadow: none; }
+  .rec .sub { margin: 0; border-radius: 0; height: 150px; }
+  .rec .controls, .rec .note, .rec .progress, .rec .title, .rec .home { display: none !important; }
+  .flash { position: fixed; inset: 0; background: #fff; z-index: 999; }
+  .rec .wrap { height: 720px; overflow: hidden; }
+  #mark { position: fixed; left: 0; right: 0; top: 720px; height: 16px; background: #000; }  /* line-id strip, cropped from the mp4 */
+  /* ?record&vertical — phone mp4 (1080x1920): title, 16:9 stage, big KO/RU/EN subtitles */
+  .vhead { display: none; }
+  body.recv { padding: 0; overflow: hidden; }
+  .recv .wrap { max-width: none; width: 1080px; height: 1920px; display: flex; flex-direction: column; overflow: hidden; }
+  .recv .vhead { display: flex; order: 0; height: 330px; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .recv .vhead h1 { margin: 0; font-size: 84px; }
+  .recv .vhead .t2 { color: #ffe9b0; font-size: 34px; margin-top: 10px; }
+  .recv .vhead .ch { color: var(--accent); font-size: 36px; margin-top: 26px; min-height: 1.3em; }
+  .recv .stage { order: 1; flex: none; border-radius: 0; box-shadow: none; aspect-ratio: 16 / 9; height: auto; }
+  .recv .progress { order: 2; margin: 0; border-radius: 0; height: 10px; }
+  .recv .sub { order: 3; flex: 1; margin: 0; border-radius: 0; padding: 50px 64px; display: flex; flex-direction: column; justify-content: center; gap: 22px; height: auto; }
+  .recv .sub .who { font-size: 40px; } .recv .sub .cue { font-size: 32px; }
+  .recv .sub .ko { font-size: 70px; line-height: 1.3; margin: 0; }
+  .recv .sub .ruline { font-size: 46px; line-height: 1.3; } .recv .sub .enline { font-size: 42px; line-height: 1.3; }
+  .recv .action { font-size: 30px; } .recv .card .ru, .recv .card .en { font-size: 32px; } .recv .actor .tag { font-size: 24px; }
+  .recv .controls, .recv .note, .recv .title, .recv .home { display: none !important; }
+  .recv #mark { top: 1920px; }
+  @media (max-width: 640px) { .controls button, .controls select, .controls label { font-size: 13px; padding: 6px 4px; }
+    /* phone: a 5-column grid across the full width */
+    .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .controls > *, .chapters button { width: 100%; min-width: 0 !important; justify-content: center; text-align: center; }
+    #me { grid-column: span 3; text-align: left; padding-left: 8px; }
+    .chapters { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    #again .lbl { display: none; }
+    .yourturn { font-size: 16px; padding: .8em 1.3em; bottom: 4%; max-width: 92%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="vhead"><h1>백설 공주</h1><div class="t2">Белоснежка · Snow White</div><div class="ch" id="vch"></div></div>
+  <a class="home" id="home" href="https://dmitriiree.github.io/"></a>
+  <div class="stage" id="stage">
+    <div class="bg" id="bgA"></div><div class="bg" id="bgB" style="opacity:0"></div>
+    <div class="tint" id="tint"></div>
+    <div id="layer"><div id="props"></div><div id="actors"></div></div>
+    <div class="action" id="action"></div>
+    <div class="card" id="card"><div class="num"></div><div class="ko"></div><div class="ru"></div><div class="en"></div></div>
+    <button class="yourturn" id="yourturn"></button>
+    <div class="title" id="title">
+      <h1>백설 공주</h1>
+      <p id="tagline"></p>
+      <button class="go" id="go"></button>
+    </div>
+  </div>
+
+  <div class="sub" id="sub">
+    <div class="who"><span id="who">—</span><span class="cue" id="cue"></span></div>
+    <div class="ko" id="ko"></div>
+    <div class="ruline" id="ru"></div>
+    <div class="enline" id="en"></div>
+  </div>
+  <div class="progress"><i id="bar"></i></div>
+
+  <div class="controls">
+    <button class="main" id="play" title="Space">▶</button>
+    <button id="prev" title="←">⏮</button>
+    <button id="again" title="R"></button>
+    <button id="next" title="→">⏭</button>
+    <select id="speed" title="Speed">
+      <option value="0.7">0.7×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option>
+    </select>
+    <select id="me" title="Rehearsal mode: the chosen role is not voiced">
+      
+    </select>
+    <label title="Russian translation"><input type="checkbox" id="ruToggle" checked> RU</label>
+    <label title="English subtitles"><input type="checkbox" id="enToggle"> EN</label>
+    <div class="chapters" id="chapters"></div>
+  </div>
+</div>
+
+<script src="data/story.js?v=1"></script>
+<script>
+(() => {
+  const S = window.STORY;
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), actorsEl = $('actors'), propsEl = $('props');
+  const COLORS = Object.fromEntries(Object.keys(S.names).map(r => [r, `var(--${r})`]));
+  COLORS.dwarfs = 'var(--d1)'; COLORS.all = 'var(--accent)';
+  const DWARFS = S.groups.dwarfs;
+  const VIEW = { left: 'left bottom', right: 'right bottom', center: 'center bottom' };
+
+  const IMG_V = '?v=2';                     // bump after re-cutting sprites / re-voicing so browsers drop cached copies
+  const defaultPose = id => Object.keys(S.sprites[id])[0];
+  function spriteFor(id, pose) {
+    const set = S.sprites[id]; return `img/${set[pose] || set[defaultPose(id)]}.png${IMG_V}`;
+  }
+
+  // ---------- items & chapters ----------
+  const items = S.items;
+  const lineItems = items.filter(i => i.kind === 'line');
+  const chapterIdx = items.map((it, i) => it.kind === 'chapter' ? i : -1).filter(i => i >= 0);
+  chapterIdx.forEach((idx, k) => {
+    const b = document.createElement('button');
+    b.textContent = `${k + 1}장`;
+    b.onclick = () => jump(idx);
+    $('chapters').appendChild(b);
+  });
+  const ROLES = ['', 'snow', 'queen', 'mirror', 'hunter', 'mother', 'prince', 'd1', 'd2', 'd3', 'n'];
+  ROLES.forEach(r => { const o = document.createElement('option'); o.value = r; $('me').appendChild(o); });
+
+  // Interface language follows the translation checkboxes: EN -> English, only RU -> Russian, none -> Korean.
+  const UI = {
+    en: { tagline: 'Snow White · a play for kids', go: '▶ 시작 · Start', press: 'Press “Start”.',
+          again: '🔁 Again', iplay: '🎭 I play', yourturn: '🎤 Your turn — say it, then press Space', yourturnTouch: '🎤 Your turn — say it, then tap here',
+          chapter: n => `${n}장 · Chapter ${n}`, home: '← 동화 · All stories' },
+    ru: { tagline: 'Белоснежка · сказка для сценки', go: '▶ 시작 · Начать', press: 'Нажмите «Начать».',
+          again: '🔁 Ещё раз', iplay: '🎭 Я играю', yourturn: '🎤 Твоя очередь — скажи и нажми пробел', yourturnTouch: '🎤 Твоя очередь — скажи и нажми сюда',
+          chapter: n => `${n}장 · Глава ${n}`, home: '← 동화 · Все сказки' },
+    ko: { tagline: '어린이 연극', go: '▶ 시작', press: '“시작”을 누르세요.',
+          again: '🔁 다시', iplay: '🎭 내 역할', yourturn: '🎤 내 차례 — 말한 다음 스페이스를 누르세요', yourturnTouch: '🎤 내 차례 — 말한 다음 여기를 누르세요',
+          chapter: n => `${n}장`, home: '← 동화 모음' },
+  };
+  let lang = 'en', lastLine = null, lastChapter = null;
+  const nameIdx = () => ({ ru: 1, en: 2 })[lang];
+  function speakerName(role) { const n = S.names[role], k = nameIdx();
+    if (document.body.classList.contains('recv')) return `${n[0]} · ${n[1]} · ${n[2]}`;
+    return k ? `${n[0]} · ${n[k]}` : n[0]; }
+  function applyLang() {
+    const T = UI[lang]; document.documentElement.lang = lang;
+    $('tagline').textContent = T.tagline; $('home').textContent = T.home; $('go').textContent = T.go; $('again').innerHTML = T.again.replace(/^(\S+) (.*)$/, '$1<span class="lbl"> $2</span>');
+    $('yourturn').textContent = matchMedia('(pointer: coarse)').matches ? T.yourturnTouch : T.yourturn;
+    [...$('me').options].forEach(o => { o.textContent = `${T.iplay}: ${o.value ? speakerName(o.value) : '—'}`; });
+    [...$('chapters').children].forEach((b, k) => { const c = items[chapterIdx[k]]; b.title = lang === 'ko' ? c.text : c[lang]; });
+    if (lastLine) $('who').textContent = speakerName(lastLine.role); else $('ko').textContent = T.press;
+    if (lastChapter) $('card').querySelector('.num').textContent = T.chapter(lastChapter.num);
+  }
+
+  const REC = /[?&]record/.test(location.search) ? (window.__rec = []) : null;
+  // ---------- state ----------
+  let idx = 0, playing = false, started = false, timer = null, token = 0;
+  let speed = 1, current = null;          // current line item
+  const heard = []; let lineStartedAt = 0;
+  let yourTurn = null;                     // rehearsal: resolves the "your turn" prompt (Space / tap)
+  const audio = new Audio(); audio.preload = 'auto';
+  const actors = {};                       // id -> {el, fx, talk, img, pose, flip}
+  const poses = {};                        // persistent poses
+  let scene = null, bgFront = $('bgA'), bgBack = $('bgB');
+
+  // ---------- Web Audio sound effects (synthesised, no files) ----------
+  let ac = null;
+  function ctx() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); return ac; }
+  function tone(freq, t0, dur, type = 'sine', vol = .15, attack = .01) {
+    const c = ctx(), o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq; o.connect(g); g.connect(c.destination);
+    g.gain.setValueAtTime(0, c.currentTime + t0);
+    g.gain.linearRampToValueAtTime(vol, c.currentTime + t0 + attack);
+    g.gain.exponentialRampToValueAtTime(.0001, c.currentTime + t0 + dur);
+    o.start(c.currentTime + t0); o.stop(c.currentTime + t0 + dur + .05); return o;
+  }
+  function noise(t0, dur, vol = .2, lp = 3000) {
+    const c = ctx(), len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'lowpass'; f.frequency.value = lp; s.buffer = buf; s.connect(f); f.connect(g); g.connect(c.destination);
+    g.gain.value = vol; s.start(c.currentTime + t0);
+  }
+  const SFX = {
+    stars(t = 0) { [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, t + i * .09, .6, 'sine', .06)); },
+    hearts(t = 0) { [880, 1175].forEach((f, i) => tone(f, t + i * .15, .5, 'sine', .05)); },
+    sparkle(t = 0) { [1568, 2093, 2637, 3136].forEach((f, i) => tone(f, t + i * .07, .5, 'sine', .035)); },
+    ding(t = 0) { tone(1760, t, .9, 'sine', .08); tone(2637, t + .02, .6, 'sine', .03); },
+    pop(t = 0) { const o = tone(300, t, .18, 'sine', .25, .005); o.frequency.exponentialRampToValueAtTime(900, ctx().currentTime + t + .15); },
+    gasp(t = 0) { noise(t, .4, .1, 800); },
+    dance(t = 0) { [523, 659, 784, 659, 523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * .25, .3, 'triangle', .06)); },
+    walk(t = 0) { for (let i = 0; i < 6; i++) { const o = tone(90, t + i * .32, .12, 'sine', .12, .005); } },
+    whoosh(t = 0) { noise(t, .5, .15, 1200); },
+  };
+  function sfx(name) { if (REC || !SFX[name]) return; try { SFX[name](0); } catch (e) {} }   // the mp4 render keeps only voices
+
+  // ---------- stage building ----------
+  function makeActor(id) {
+    const el = document.createElement('div'); el.className = 'actor'; el.style.opacity = 0;
+    el.innerHTML = `<div class="fx"><div class="talk"><img alt=""></div></div><div class="tag"></div>`;
+    el.querySelector('.tag').textContent = S.names[id][0];
+    el.querySelector('.tag').style.color = COLORS[id];
+    actorsEl.appendChild(el);
+    const a = { id, el, fx: el.querySelector('.fx'), talk: el.querySelector('.talk'), img: el.querySelector('img'),
+                phase: Math.random() * 6 };
+    el.classList.add(id);
+    if (id === 'queen') el.querySelector('.talk').insertAdjacentHTML('beforeend', '<div class="apple">🍎</div>');
+    actors[id] = a; return a;
+  }
+  function setPose(id, pose) {
+    poses[id] = pose; const a = actors[id]; if (!a) return;
+    const src = spriteFor(id, pose); if (!a.img.src.endsWith(src)) a.img.src = src;
+    a.el.classList.toggle('holding', pose === 'apple');
+    a.el.classList.toggle('disguise', pose === 'apple');
+  }
+  function place(a, spec, instant) {
+    const el = a.el;
+    if (instant) el.style.transition = 'none';
+    el.style.left = spec.x + '%'; el.style.bottom = spec.y + '%'; el.style.height = spec.h + '%';
+    el.classList.toggle('flip', !!spec.flip);
+    el.style.zIndex = String(10 + Math.round(100 - spec.y));
+    if (instant) { el.offsetWidth; el.style.transition = ''; }
+  }
+  function setScene(name, pose) {
+    const sc = S.scenes[name]; scene = name;
+    // background crossfade
+    const bgKey = sc.bg + (sc.view || '');
+    if (bgFront.dataset.key !== bgKey) {
+      bgBack.className = 'bg';
+      bgBack.style.backgroundImage = `url(img/bg-${sc.bg}.jpg${IMG_V})`;
+      bgBack.style.backgroundPosition = VIEW[sc.view || 'center'];
+      bgBack.dataset.key = bgKey;
+      bgBack.style.opacity = 1; bgFront.style.opacity = 0;
+      [bgFront, bgBack] = [bgBack, bgFront];
+    }
+    $('tint').className = 'tint ' + (sc.tint || '');
+    Object.assign(poses, pose || {});
+    const ids = Object.keys(sc.cast);
+    ids.forEach((id, k) => {
+      const a = actors[id] || makeActor(id), spec = sc.cast[id];
+      const wasOff = parseFloat(a.el.style.left) > 105 || parseFloat(a.el.style.left) < -5;
+      setPose(id, poses[id] || defaultPose(id));
+      a.fx.className = 'fx'; a.el.classList.remove('mad');
+      if (wasOff || (spec.enter && !a.el.style.left)) {   // walk in from the left edge (or the right one)
+        place(a, { ...spec, x: spec.enter === 'right' ? 118 : -18 }, true);
+        requestAnimationFrame(() => { a.el.style.opacity = 1; place(a, sc.cast[id]); });
+      } else {
+        place(a, spec); a.el.style.opacity = 1;
+      }
+    });
+    Object.values(actors).forEach(a => { if (!ids.includes(a.id)) { a.el.style.opacity = 0; } });
+  }
+
+  // ---------- effects ----------
+  function restartAnim(a, cls) { a.fx.className = 'fx'; a.fx.offsetWidth; if (cls) a.fx.classList.add(cls); }
+  function particle(a, char, n = 5, spread = 60) {
+    for (let i = 0; i < n; i++) setTimeout(() => {
+      const p = document.createElement('div'); p.className = 'particle'; p.textContent = char;
+      p.style.left = (50 + (Math.random() - .5) * spread) + '%'; p.style.top = (Math.random() * 30) + '%';
+      a.el.appendChild(p); setTimeout(() => p.remove(), 1700);
+    }, i * 220);
+  }
+  function tears(a) {
+    for (let i = 0; i < 6; i++) setTimeout(() => {
+      const t = document.createElement('div'); t.className = 'tear';
+      const flip = a.el.classList.contains('flip');
+      t.style.left = (flip ? 30 : 62) + Math.random() * 8 + '%'; t.style.top = '22%';
+      a.el.appendChild(t); setTimeout(() => t.remove(), 1100);
+    }, i * 330);
+  }
+  function burst(a, text, delay = 0) {
+    setTimeout(() => {
+      const b = document.createElement('div'); b.className = 'burst'; b.textContent = text;
+      b.style.color = getComputedStyle(document.documentElement).getPropertyValue('--' + a.id) || '#fff';
+      a.el.appendChild(b); setTimeout(() => b.remove(), 1200);
+    }, delay);
+  }
+  function burstAt(a, ch) { particle(a, ch, 1, 10); }
+  function moveGroup(ids, dx, dur, flip) {
+    ids.forEach((id, k) => { const a = actors[id]; if (!a || a.el.style.opacity === '0') return;
+      if (flip !== undefined) a.el.classList.toggle('flip', flip);
+      a.el.style.transition = `left ${dur}s ease-in ${k * .12}s, opacity .6s`;
+      a.el.style.left = (parseFloat(a.el.style.left) + dx) + '%';
+      restartAnim(a, 'a-jump');
+      setTimeout(() => a.el.style.transition = '', (dur + .5) * 1000);
+    });
+  }
+
+  function runAnim(anim, speakers, item) {
+    if (!anim) return;
+    const [kind, target] = anim.split(':');
+    // `kind:target` acts on the target (a role or a group), e.g. a narrator line that makes the dwarfs sob
+    const ids = target ? speakersOf(target) : speakers;
+    const who = ids.map(id => actors[id]).filter(Boolean);
+    const onStage = Object.values(actors).filter(a => a.el.style.opacity !== '0');
+    switch (kind) {
+      case 'jump': case 'droop': case 'shake': case 'laugh': case 'hurt': case 'look': case 'bow': case 'cute':
+        who.forEach(a => restartAnim(a, 'a-' + kind)); break;
+      case 'sob': who.forEach(a => { restartAnim(a, 'a-sob'); tears(a); }); break;
+      case 'angry': who.forEach(a => { restartAnim(a, 'a-angry'); a.el.classList.add('mad'); particle(a, '💢', 3, 40);
+          setTimeout(() => a.el.classList.remove('mad'), 1800); }); break;
+      case 'think': who.forEach(a => { restartAnim(a, 'a-think'); particle(a, '💭', 2, 30); }); break;
+      case 'search': who.forEach(a => { restartAnim(a, 'a-think'); particle(a, '🔍', 4, 50); }); sfx('sparkle'); break;
+      case 'critters': onStage.forEach(a => { particle(a, '🐿️', 2, 90); particle(a, '🐦', 3, 90); }); sfx('stars'); break;
+      case 'fade': who.forEach(a => { particle(a, '✨', 6, 60); a.el.style.transition = 'opacity 2.4s ease, bottom 2.4s ease';
+          a.el.style.opacity = 0; a.el.style.bottom = (parseFloat(a.el.style.bottom) + 12) + '%';
+          setTimeout(() => a.el.style.transition = '', 2600); }); sfx('sparkle'); break;
+      case 'run-off': sfx('walk'); moveGroup(ids, 120, 2, false); break;
+      case 'wake': onStage.forEach(a => restartAnim(a, 'a-jump')); sfx('gasp'); break;
+      case 'sleep': actors.snow && particle(actors.snow, '💤', 4, 30); break;
+      case 'dance': onStage.forEach(a => { restartAnim(a, 'a-dance'); particle(a, '🎵', 3, 60); }); sfx('dance'); break;
+      case 'poison': onStage.forEach(a => { particle(a, '🍎', 1, 10); particle(a, '☠️', 3, 50); }); break;
+      case 'offer': who.forEach(a => { restartAnim(a, 'a-cute'); particle(a, '🍎', 2, 30); }); break;
+      case 'faint': { const a = actors.snow; if (a) { particle(a, '🍎', 1, 10); setTimeout(() => restartAnim(a, 'a-faint'), 500); }
+          sfx('gasp'); break; }
+      case 'phone': who.forEach(a => { restartAnim(a, 'a-jump'); particle(a, '📞', 2, 30); }); break;
+      case 'walk-in': sfx('walk'); actors.prince && restartAnim(actors.prince, 'a-jump'); DWARFS.forEach(id => actors[id] && restartAnim(actors[id], 'a-look')); break;
+      case 'apple-pop': { const p = actors.prince, a = actors.snow;
+          // `from` comes from the scene: after a jump the prince may still be at his off-stage start
+          if (p && a) { const from = S.scenes[scene].cast.prince.x; p.el.style.transition = 'left .8s ease-in-out';
+            p.el.style.left = (parseFloat(a.el.style.left) + 12) + '%'; setTimeout(() => restartAnim(p, 'a-bow'), 800);
+            setTimeout(() => { burst(a, '🍎 툭!'); sfx('pop'); particle(a, '✨', 6, 60); }, 1400);
+            setTimeout(() => { p.el.style.left = from + '%'; }, 2000); setTimeout(() => p.el.style.transition = '', 2900); }
+          break; }
+      case 'propose': who.forEach(a => { restartAnim(a, 'a-bow'); particle(a, '💍', 2, 20); particle(a, '💗', 3, 50); }); break;
+    }
+  }
+  function runFx(fx, speakers) {
+    if (!fx) return;
+    const who = speakers.map(id => actors[id]).filter(Boolean);
+    if (fx === 'stars') who.forEach(a => particle(a, '⭐', 5));
+    if (fx === 'hearts') who.forEach(a => particle(a, '💗', 5));
+    if (fx === 'sparkle') who.forEach(a => particle(a, '✨', 5));
+    sfx(fx);
+  }
+
+  // ---------- subtitles ----------
+  function fillSub(root, it) {
+    const [who, cue] = root.querySelector('.who').children;
+    who.textContent = speakerName(it.role); who.style.color = COLORS[it.role];
+    cue.innerHTML = it.cue ? `(${it.cue}<span class="r"> · ${it.cue_ru}</span><span class="e"> · ${it.cue_en}</span>)` : '';
+    root.querySelector('.ko').textContent = it.text; root.querySelector('.ruline').textContent = it.ru;
+    root.querySelector('.enline').textContent = it.en || '';
+  }
+  // Keep the subtitle panel as tall as the longest line, so the controls below never jump.
+  function fitSub() {
+    if (REC) return;
+    const sub = $('sub'), probe = sub.cloneNode(true);
+    probe.querySelectorAll('[id]').forEach(e => e.removeAttribute('id')); probe.removeAttribute('id');
+    Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', left: '0', top: '0', minHeight: '0',
+                                 width: sub.getBoundingClientRect().width + 'px' });
+    document.body.appendChild(probe);
+    let max = 0; lineItems.forEach(it => { fillSub(probe, it); max = Math.max(max, probe.getBoundingClientRect().height); });
+    probe.remove(); sub.style.minHeight = Math.ceil(max) + 'px';
+  }
+  let fitTimer; addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitSub, 150); });
+  function showSub(it, speakers) {
+    lastLine = it; fillSub($('sub'), it);
+    Object.values(actors).forEach(a => a.el.classList.toggle('speaking', speakers.includes(a.id)));
+    const n = lineItems.indexOf(it) + 1;
+    $('bar').style.width = (n / lineItems.length * 100) + '%';
+  }
+  function showAction(it) {
+    const el = $('action'); el.innerHTML = `${it.text} <span class="r">· ${it.ru}</span> <span class="e">· ${it.en || ''}</span>`;
+    el.classList.add('show');
+  }
+
+  // ---------- sequencing ----------
+  function speakersOf(role) { return S.groups[role] || [role]; }
+  function wait(ms, t) { return new Promise(res => { timer = setTimeout(() => res(t === token), ms); }); }
+
+  async function step() {
+    const t = token;
+    while (playing && t === token && idx < items.length) {
+      const it = items[idx];
+      $('action').classList.remove('show');
+      if (it.kind === 'chapter') {
+        const c = $('card'); lastChapter = it; c.querySelector('.num').textContent = UI[lang].chapter(it.num);
+        c.querySelector('.ko').textContent = it.text; c.querySelector('.ru').textContent = it.ru;
+        c.querySelector('.en').textContent = it.en || '';
+        c.classList.add('show'); sfx('stars'); $('vch').textContent = `${it.num}장 · ${it.text}`;
+        [...$('chapters').children].forEach((b, k) => b.classList.toggle('on', k === it.num - 1));
+        if (!await wait(2600 / speed, t)) return;
+        c.classList.remove('show');
+        if (!await wait(400, t)) return;
+      } else if (it.kind === 'scene') {
+        setScene(it.scene, it.pose);
+        if (!await wait(900, t)) return;
+      } else if (it.kind === 'action') {
+        Object.entries(it.pose || {}).forEach(([id, p]) => setPose(id, p));
+        showAction(it); runAnim(it.anim, [], it); runFx(it.fx, []);
+        if (!await wait(it.dur * 1000 / speed, t)) return;
+      } else if (it.kind === 'line') {
+        if (!await playLine(it, t)) return;
+        if (!await wait(450 / speed, t)) return;
+      }
+      idx++;
+    }
+    if (idx >= items.length) { playing = false; $('play').textContent = '▶'; current = null; window.__done = true; }
+  }
+
+  function playLine(it, t) {
+    current = it;
+    const here = items.indexOf(it);
+    if (heard[heard.length - 1] !== here) heard.push(here);   // lines in the order they were actually heard
+    lineStartedAt = performance.now();
+    const speakers = speakersOf(it.role);
+    Object.entries(it.pose || {}).forEach(([id, p]) => setPose(id, p));
+    showSub(it, speakers);
+    runAnim(it.anim, speakers, it); runFx(it.fx, speakers);
+    const me = $('me').value;
+    const mine = me && (speakers.includes(me) || it.role === me);
+    const heardIt = new Promise(res => {
+      audio.src = it.audio + IMG_V; audio.playbackRate = speed; audio.currentTime = 0;
+      audio.onplaying = () => {
+        if (REC) { REC.push({ t: performance.now(), audio: it.audio, id: it.id });
+                   const d = [it.id % 6, Math.floor(it.id / 6) % 6, Math.floor(it.id / 36)].map(v => v * 51);
+                   $('mark').style.background = `rgb(${d.join(',')})`; }
+        audio.onplaying = null; };
+      audio.onended = () => { current = null; res(t === token); };
+      audio.onerror = () => { current = null; res(t === token); };
+      audio.play().catch(() => res(false));
+    });
+    if (!mine) return heardIt;
+    // rehearsal: the model line has played; now the child repeats it and presses Space (or taps) to go on
+    return heardIt.then(ok => ok && t === token && new Promise(res => {
+      const btn = $('yourturn'); btn.classList.add('show');
+      yourTurn = btn.onclick = () => { btn.classList.remove('show'); btn.onclick = yourTurn = null; res(t === token); };
+    }));
+  }
+
+  // ---------- talking animation (envelope-driven) ----------
+  function frame(ts) {
+    const time = ts / 1000;
+    let env = 0, speakers = [];
+    if (current && !audio.paused) {
+      speakers = speakersOf(current.role);
+      env = current.env[Math.floor(audio.currentTime * S.fps)] || 0;
+    }
+    Object.values(actors).forEach(a => {
+      const talking = speakers.includes(a.id);
+      const e = talking ? env : 0;
+      const breathe = Math.sin(time * 2.1 + a.phase) * .012;
+      const wob = talking ? Math.sin(time * 18 + a.phase) * e * 2.2 : 0;
+      a.talk.style.transform = `translateY(${-e * 5}%) scale(${1 - e * .03 - breathe * .3}, ${1 + e * .07 + breathe}) rotate(${wob}deg)`;
+    });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- controls ----------
+  function rebuildTo(target) {
+    // Replay scene/pose state up to `target` so jumping lands on a consistent stage.
+    Object.keys(poses).forEach(k => delete poses[k]);
+    let lastScene = null; const ps = {};
+    for (let i = 0; i < target; i++) {
+      const it = items[i];
+      if (it.kind === 'scene') { lastScene = it; Object.assign(ps, it.pose || {}); }
+      if (it.kind === 'line' || it.kind === 'action') Object.assign(ps, it.pose || {});
+    }
+    if (lastScene) { Object.assign(poses, ps); setScene(lastScene.scene, ps); }
+  }
+  function stop() { token++; clearTimeout(timer); audio.pause(); current = null; yourTurn = $('yourturn').onclick = null; $('yourturn').classList.remove('show'); }
+  function play() { if (!started) return start(); playing = true; $('play').textContent = '⏸'; step(); }
+  function pause() { playing = false; stop(); $('play').textContent = '▶'; }
+  function jump(i) { stop(); idx = Math.max(0, Math.min(items.length - 1, i)); $('card').classList.remove('show');
+                     rebuildTo(idx); if (!started) { started = true; $('title').style.display = 'none'; } playing = true; $('play').textContent = '⏸'; step(); }
+  function lineNeighbour(dir) {
+    let i = idx + dir; while (i >= 0 && i < items.length && items[i].kind !== 'line') i += dir;
+    return i < 0 ? 0 : i;
+  }
+  function start() { started = true; $('title').style.display = 'none'; ctx(); idx = 0; playing = true; $('play').textContent = '⏸'; step(); }
+
+  $('title').onclick = start;
+  $('play').onclick = () => playing ? pause() : play();
+  $('next').onclick = () => jump(lineNeighbour(1));
+  $('prev').onclick = () => jump(lineNeighbour(-1));
+  // "Again" = the line the viewer just heard: the current one if it has been playing for a while,
+  // otherwise (first 1.5 s of a new line, a pause, a stage direction) the previous heard line.
+  $('again').onclick = () => {
+    const inLine = current && (performance.now() - lineStartedAt) / 1000 * speed > 1.5;
+    let target = inLine ? heard[heard.length - 1] : (current ? heard[heard.length - 2] : heard[heard.length - 1]);
+    if (target === undefined) { target = Math.min(idx, items.length - 1); while (target > 0 && items[target].kind !== 'line') target--; }
+    if (!inLine && current) heard.pop();
+    jump(target);
+  };
+  $('speed').onchange = e => { speed = +e.target.value; audio.playbackRate = speed; };
+  $('me').onchange = e => e.target.blur();   // so Space goes to the player, not the role list
+  function applyTrans() {
+    const ru = $('ruToggle').checked, en = $('enToggle').checked;
+    lang = en ? 'en' : ru ? 'ru' : 'ko'; applyLang();
+    document.body.classList.toggle('hide-ru', !ru);
+    document.body.classList.toggle('hide-en', !en);
+    try { localStorage.setItem('snow-trans', JSON.stringify({ ru, en })); } catch (e) {}
+    fitSub();
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem('snow-trans') || 'null');
+    if (saved && typeof saved === 'object') { $('ruToggle').checked = !!saved.ru; $('enToggle').checked = !!saved.en; }
+  } catch (e) {}
+  applyTrans();
+  $('ruToggle').onchange = $('enToggle').onchange = applyTrans;
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'SELECT') return;
+    if (e.code === 'Space') { e.preventDefault(); if (yourTurn) yourTurn(); else playing ? pause() : play(); }
+    if (e.code === 'ArrowRight') $('next').click();
+    if (e.code === 'ArrowLeft') $('prev').click();
+    if (e.code === 'KeyR') $('again').click();
+  });
+
+  if (REC) {                              // mp4 render: white sync flash, then autoplay
+    if (/[?&]vertical/.test(location.search)) {   // phone version: all three languages
+      document.body.classList.add('recv'); $('ruToggle').checked = $('enToggle').checked = true; applyTrans();
+      $('ko').textContent = ''; $('who').textContent = '';
+    }
+    document.body.classList.add('rec');
+    const m = document.createElement('div'); m.id = 'mark'; document.body.appendChild(m);
+    setTimeout(start, 1500);
+  }
+  window.snow = { jump, items };  // handy for jumping from the console
+  // initial stage behind the title
+  const firstScene = items.find(i => i.kind === 'scene'); setScene(firstScene.scene, firstScene.pose);
+})();
+</script>
+</body>
+</html>
